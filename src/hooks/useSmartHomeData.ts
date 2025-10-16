@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   applySettings,
   fetchSettingsFromBackend,
@@ -31,37 +31,59 @@ export function useSmartHomeData() {
   )
 
   const [settings, setSettings] = useState<SmartHomeSettings>(initialSettings)
+  const settingsRef = useRef<SmartHomeSettings>(initialSettings)
   const [snapshot, setSnapshot] = useState<SmartHomeSnapshot | null>(null)
   const [history, setHistory] = useState<HistoricalRecord[]>([])
   const [loading, setLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<'fetch' | 'settings' | null>(null)
+  const [errorKey, setErrorKey] = useState<'fetch' | 'settings' | 'backend' | null>(
+    null,
+  )
+
+  const applyLocalSettings = useCallback((next: SmartHomeSettings) => {
+    settingsRef.current = next
+    setSettings(next)
+  }, [])
 
   const refresh = useCallback(
     async (settingsOverride?: SmartHomeSettings) => {
       setLoading(true)
       setErrorKey(null)
       try {
-        const activeSettings = settingsOverride ?? settings
+        const activeSettings = settingsOverride ?? settingsRef.current
         const data = await fetchSmartHomeSnapshot(activeSettings)
         setSnapshot(data)
-        const logs = await syncHistoricalLogs(data)
-        if (logs.length) {
-          setHistory(logs)
+        if (data) {
+          const logs = await syncHistoricalLogs(data)
+          if (logs.length) {
+            setHistory(logs)
+          }
         }
       } catch (err) {
         console.error(err)
-        setErrorKey('fetch')
+        if (err instanceof Error) {
+          if (err.message === 'mock-data-disabled') {
+            setErrorKey('backend')
+          } else if (err.message === 'snapshot-not-found') {
+            setSnapshot(null)
+            setHistory([])
+            setErrorKey(null)
+          } else {
+            setErrorKey('fetch')
+          }
+        } else {
+          setErrorKey('fetch')
+        }
       } finally {
         setLoading(false)
       }
     },
-    [settings],
+    [],
   )
 
   const updateSettings = useCallback(
     async (next: Partial<SmartHomeSettings>) => {
-      const merged = { ...settings, ...next }
-      setSettings(merged)
+      const merged = { ...settingsRef.current, ...next }
+      applyLocalSettings(merged)
       setLoading(true)
       setErrorKey(null)
       try {
@@ -74,7 +96,7 @@ export function useSmartHomeData() {
         setLoading(false)
       }
     },
-    [refresh, settings],
+    [applyLocalSettings, refresh],
   )
 
   useEffect(() => {
@@ -90,8 +112,8 @@ export function useSmartHomeData() {
       const remoteSettings = await fetchSettingsFromBackend()
       if (cancelled) return
 
-      if (remoteSettings) {
-        setSettings(remoteSettings)
+      if (remoteSettings && JSON.stringify(remoteSettings) !== JSON.stringify(settingsRef.current)) {
+        applyLocalSettings(remoteSettings)
         await refresh(remoteSettings)
       } else {
         await refresh()
@@ -103,7 +125,7 @@ export function useSmartHomeData() {
     return () => {
       cancelled = true
     }
-  }, [refresh])
+  }, [applyLocalSettings, refresh])
 
   return {
     snapshot,

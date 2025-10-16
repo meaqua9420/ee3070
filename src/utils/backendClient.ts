@@ -26,6 +26,7 @@ async function request<T>(
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       credentials: 'include',
+      cache: 'no-store',
       ...init,
     })
 
@@ -44,7 +45,20 @@ async function request<T>(
       data = await response.json().catch(() => undefined)
     }
 
-    return { ok: true, status: response.status, data: data as T }
+    const payload =
+      data && typeof data === 'object' && data !== null && 'data' in (data as Record<string, unknown>)
+        ? (data as { data: unknown }).data
+        : data
+    const message =
+      data && typeof data === 'object' && data !== null && 'message' in (data as Record<string, unknown>)
+        ? String((data as { message: unknown }).message ?? '')
+        : undefined
+    return {
+      ok: true,
+      status: response.status,
+      data: payload as T,
+      message: message && message.length > 0 ? message : undefined,
+    }
   } catch (error) {
     console.warn('[backend] Request failed', path, error)
     return {

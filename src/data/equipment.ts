@@ -47,6 +47,9 @@ export async function testEquipmentConnection(
   equipmentId: string,
   _language: Language,
 ): Promise<EquipmentTestResult> {
+  const enableMocks =
+    (import.meta.env.VITE_ENABLE_MOCKS ?? 'false').toString().toLowerCase() === 'true'
+
   if (equipmentId === 'arduino') {
     const result = await runArduinoPing()
     return {
@@ -72,6 +75,15 @@ export async function testEquipmentConnection(
 
     if (response.message) {
       console.warn('[equipment] Backend test failed', response.message)
+    }
+  }
+
+  if (!enableMocks) {
+    return {
+      id: equipmentId,
+      success: false,
+      latencyMs: 0,
+      messageKey: 'equipment.status.backendMissing',
     }
   }
 

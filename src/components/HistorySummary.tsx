@@ -23,7 +23,7 @@ export function HistorySummary({ history }: HistorySummaryProps) {
   const avgTemperature =
     temperatures.reduce((sum, value) => sum + value, 0) / temperatures.length
   const avgHumidity = humidity.reduce((sum, value) => sum + value, 0) / humidity.length
-  const totalWater = Math.max(...water)
+  const totalWater = water.reduce((sum, value) => sum + value, 0)
 
   const highestTemperature = Math.max(...temperatures)
   const lowestTemperature = Math.min(...temperatures)

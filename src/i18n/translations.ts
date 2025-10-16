@@ -16,6 +16,7 @@ export type TranslationKey =
   | 'notifications.error'
   | 'errors.fetch'
   | 'errors.settings'
+  | 'errors.backendMissing'
   | 'panel.realtime.title'
   | 'panel.realtime.subtitle'
   | 'data.temperature.title'
@@ -115,6 +116,7 @@ export type TranslationKey =
   | 'equipment.status.ok'
   | 'equipment.status.fail'
   | 'equipment.status.unknown'
+  | 'equipment.status.backendMissing'
   | 'equipment.status.serialUnsupported'
   | 'equipment.status.serialDenied'
   | 'equipment.status.arduinoTimeout'
@@ -158,6 +160,7 @@ const translationBundles = {
     'notifications.error': '通知啟用失敗。',
     'errors.fetch': '無法取得最新資料，請稍後再試。',
     'errors.settings': '設定更新失敗，請檢查裝置連線。',
+    'errors.backendMissing': '未連線後端服務，請設定 API 或於環境啟用模擬資料。',
     'panel.realtime.title': '即時感測',
     'panel.realtime.subtitle': '最新的環境與健康數據來自 Arduino 感測器。',
     'data.temperature.title': '溫度',
@@ -257,6 +260,7 @@ const translationBundles = {
     'equipment.status.ok': '連線成功 ({{latency}}ms)',
     'equipment.status.fail': '連線失敗 ({{latency}}ms)',
     'equipment.status.unknown': '尚未測試',
+    'equipment.status.backendMissing': '尚未連線後端 API',
     'equipment.status.serialUnsupported': '瀏覽器不支援 Web Serial，請使用 Chrome/Edge (HTTPS)。',
     'equipment.status.serialDenied': '未授權存取 Arduino 序列埠。',
     'equipment.status.arduinoTimeout': 'Arduino 無回應，請確認韌體已載入。',
@@ -299,6 +303,7 @@ const translationBundles = {
     'notifications.error': 'Failed to enable notifications.',
     'errors.fetch': 'Unable to fetch the latest data. Please try again.',
     'errors.settings': 'Failed to update settings. Check the device connection.',
+    'errors.backendMissing': 'Backend API missing. Configure it or enable mock data in the environment.',
     'panel.realtime.title': 'Realtime Sensors',
     'panel.realtime.subtitle': 'Latest environment and wellness data from the Arduino sensors.',
     'data.temperature.title': 'Temperature',
@@ -398,6 +403,7 @@ const translationBundles = {
     'equipment.status.ok': 'Online ({{latency}}ms)',
     'equipment.status.fail': 'Failed ({{latency}}ms)',
     'equipment.status.unknown': 'Not tested yet',
+    'equipment.status.backendMissing': 'Backend API is not configured',
     'equipment.status.serialUnsupported': 'Web Serial not supported. Use Chrome/Edge over HTTPS.',
     'equipment.status.serialDenied': 'Serial port access was denied.',
     'equipment.status.arduinoTimeout': 'No response from Arduino. Ensure PING/PONG firmware is running.',

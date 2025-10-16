@@ -1,7 +1,22 @@
 const FALLBACK_LANGUAGE = 'zh'
 const ALERT_TAG = 'smart-cat-home-alert'
-const DEFAULT_ICON = '/vite.svg'
-const DEFAULT_BADGE = '/vite.svg'
+
+const BASE_SCOPE = (() => {
+  const scope = (self.registration && self.registration.scope) || '/'
+  return scope.endsWith('/') ? scope : `${scope}/`
+})()
+
+function resolveAssetPath(asset) {
+  try {
+    return new URL(asset, BASE_SCOPE).toString()
+  } catch (error) {
+    console.warn('[sw] failed to resolve asset path', asset, error)
+    return asset
+  }
+}
+
+const DEFAULT_ICON = resolveAssetPath('purrfect-icon.png')
+const DEFAULT_BADGE = resolveAssetPath('purrfect-icon.png')
 let lastAlertId = null
 let languagePreference = FALLBACK_LANGUAGE
 

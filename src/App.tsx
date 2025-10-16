@@ -14,6 +14,12 @@ import { useLanguage } from './i18n/LanguageProvider'
 import type { Language, TranslationKey } from './i18n/translations'
 
 function App() {
+  const iconUrl = useMemo(() => {
+    const base = import.meta.env.BASE_URL ?? '/'
+    const normalized = base.endsWith('/') ? base : `${base}/`
+    return `${normalized}purrfect-icon.png`
+  }, [])
+
   const {
     snapshot,
     history,
@@ -136,10 +142,13 @@ function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div>
-          <h1>{t('app.title')}</h1>
-          <p>{t('app.subtitle')}</p>
-          <small>{lastUpdatedLabel}</small>
+        <div className="app-brand">
+          <img src={iconUrl} alt={t('app.title')} className="app-brand__icon" />
+          <div>
+            <h1>{t('app.title')}</h1>
+            <p>{t('app.subtitle')}</p>
+            <small>{lastUpdatedLabel}</small>
+          </div>
         </div>
         <div className="header-actions">
           <button
@@ -189,7 +198,11 @@ function App() {
 
       {error ? (
         <div className="error-banner">
-          {error === 'fetch' ? t('errors.fetch') : t('errors.settings')}
+          {error === 'fetch'
+            ? t('errors.fetch')
+            : error === 'backend'
+              ? t('errors.backendMissing')
+              : t('errors.settings')}
         </div>
       ) : null}
       {notificationMessage ? (

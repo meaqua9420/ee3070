@@ -26,6 +26,25 @@ const BAUD_RATE = 9600
 const PING_COMMAND = 'PING\n'
 const EXPECTED_RESPONSE = 'PONG'
 const TIMEOUT_MS = 2000
+const REQUIRED_FIELDS: Array<keyof SmartHomeReadingShape> = [
+  'temperatureC',
+  'humidityPercent',
+  'waterIntakeMl',
+  'airQualityIndex',
+  'catWeightKg',
+  'lastFeedingMinutesAgo',
+  'timestamp',
+]
+
+type SmartHomeReadingShape = {
+  temperatureC: number
+  humidityPercent: number
+  waterIntakeMl: number
+  airQualityIndex: number
+  catWeightKg: number
+  lastFeedingMinutesAgo: number
+  timestamp: string
+}
 
 interface ArduinoTestResult {
   success: boolean
@@ -66,6 +85,23 @@ async function writeCommand(port: SerialPort, command: string) {
   } finally {
     writer.releaseLock()
   }
+}
+
+function extractSmartHomePayload(raw: string) {
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (parsed && typeof parsed === 'object') {
+      const candidate =
+        'reading' in parsed && parsed.reading && typeof parsed.reading === 'object'
+          ? (parsed.reading as Record<string, unknown>)
+          : (parsed as Record<string, unknown>)
+      const isValid = REQUIRED_FIELDS.every((field) => field in candidate)
+      return isValid ? candidate : null
+    }
+  } catch {
+    // ignore JSON parse failures
+  }
+  return null
 }
 
 async function pickSerialPort(): Promise<SerialPort | null> {
@@ -115,11 +151,24 @@ export async function runArduinoPing(): Promise<ArduinoTestResult> {
     const response = await readResponse(port)
     const latency = Math.round(performance.now() - start)
 
-    if (response.trim().includes(EXPECTED_RESPONSE)) {
+    const trimmed = response.trim()
+
+    if (trimmed.includes(EXPECTED_RESPONSE)) {
       return {
         success: true,
         latencyMs: latency,
         messageKey: 'equipment.status.ok',
+      }
+    }
+
+    if (trimmed) {
+      const payload = extractSmartHomePayload(trimmed)
+      if (payload) {
+        return {
+          success: true,
+          latencyMs: latency,
+          messageKey: 'equipment.status.ok',
+        }
       }
     }
 

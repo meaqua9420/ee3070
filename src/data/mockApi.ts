@@ -65,6 +65,9 @@ function buildMockSnapshot(settings?: SmartHomeSettings): SmartHomeSnapshot {
 export async function fetchSmartHomeSnapshot(
   settings?: SmartHomeSettings,
 ): Promise<SmartHomeSnapshot> {
+  const enableMocks =
+    (import.meta.env.VITE_ENABLE_MOCKS ?? 'false').toString().toLowerCase() === 'true'
+
   if (API_BASE_URL) {
     const response = await getJson<SmartHomeSnapshot>('/api/snapshot/latest')
     if (response.ok && response.data) {
@@ -76,6 +79,14 @@ export async function fetchSmartHomeSnapshot(
         status: snapshot.status ?? deriveStatus(snapshot.reading, activeSettings),
       }
     }
+
+    if (response.status === 404) {
+      throw new Error('snapshot-not-found')
+    }
+  }
+
+  if (!enableMocks) {
+    throw new Error('mock-data-disabled')
   }
 
   await new Promise((resolve) => setTimeout(resolve, 200))

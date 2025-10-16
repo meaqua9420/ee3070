@@ -16,7 +16,9 @@ export interface PushSubscriptionResult {
   message?: string
 }
 
-const SW_PATH = '/smart-cat-home-sw.js'
+const RAW_BASE_URL = import.meta.env.BASE_URL ?? '/'
+const BASE_URL = RAW_BASE_URL.endsWith('/') ? RAW_BASE_URL : `${RAW_BASE_URL}/`
+const SW_PATH = `${BASE_URL}smart-cat-home-sw.js`
 const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? ''
 
 /**
@@ -60,7 +62,7 @@ export async function pushNotificationWorker(language?: Language): Promise<PushW
   try {
     const registration = await navigator.serviceWorker.register(SW_PATH, {
       type: 'module',
-      scope: '/',
+      scope: BASE_URL,
     })
 
     if (language) {
