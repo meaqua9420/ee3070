@@ -1,10 +1,47 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- Use purrfect icon instead of vite logo -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/purrfect-icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/purrfect-icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/purrfect-icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/purrfect-icon-512.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0f172a" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>smart-cat-home</title>
+    <meta name="description" content="智慧貓宅儀表板 - 即時監控環境、警示與 AI 建議" />
+    <title>智慧貓宅 - Smart Cat Home</title>
+    <script type="module">
+      const enablePwa = import.meta.env.VITE_ENABLE_PWA === '1'
+      if (!enablePwa && typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+        const purgeServiceWorkers = async () => {
+          if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+            try {
+              const registrations = await navigator.serviceWorker.getRegistrations()
+              await Promise.all(
+                registrations
+                  .filter((reg) => reg?.active?.scriptURL?.includes('smart-cat-home-sw'))
+                  .map((reg) => reg.unregister().catch(() => {})),
+              )
+            } catch (error) {
+              console.warn('[sw] Failed to unregister service workers', error)
+            }
+          }
+
+          if ('caches' in window && window.caches?.keys) {
+            try {
+              const cacheKeys = await window.caches.keys()
+              await Promise.all(cacheKeys.map((key) => window.caches.delete(key).catch(() => {})))
+            } catch (error) {
+              console.warn('[sw] Failed to clear caches', error)
+            }
+          }
+        }
+
+        purgeServiceWorkers().catch(() => {})
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

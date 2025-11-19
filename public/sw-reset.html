@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Cat Home - SW Reset</title>
+    <style>
+      :root {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      .card {
+        max-width: 480px;
+        width: 100%;
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 35px rgba(15, 23, 42, 0.15);
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.25rem;
+      }
+      p {
+        margin: 0.25rem 0;
+      }
+      code {
+        font-size: 0.95rem;
+        background: #e2e8f0;
+        padding: 0 0.25rem;
+        border-radius: 4px;
+      }
+      .status {
+        margin-top: 1rem;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>清除舊版快取 / Reset Smart Cat Home cache</h1>
+      <p>這個工具會：<br />1) 解除安裝舊的 Service Worker<br />2) 刪除「智慧貓屋」相關 Cache</p>
+      <p>完成後會自動重新導向回主面板。</p>
+      <p class="status" id="status">Running cleanup…</p>
+    </div>
+    <script>
+      ;(async () => {
+        const report = (message) => {
+          const el = document.getElementById('status')
+          if (el) el.textContent = message
+        }
+
+        try {
+          if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+            const registrations = await navigator.serviceWorker.getRegistrations()
+            await Promise.all(
+              registrations
+                .filter((reg) => reg?.active?.scriptURL?.includes('smart-cat-home-sw'))
+                .map((reg) => reg.unregister().catch(() => {})),
+            )
+          }
+
+          if ('caches' in window) {
+            const cacheKeys = await caches.keys()
+            await Promise.all(cacheKeys.filter((key) => key.includes('smart-cat-home')).map((key) => caches.delete(key)))
+          }
+
+          report('Cleanup complete. Redirecting…')
+        } catch (error) {
+          report(`Cleanup hit an issue: ${error instanceof Error ? error.message : String(error)}`)
+          return
+        }
+
+        setTimeout(() => {
+          const target = window.location.pathname.replace('sw-reset.html', '')
+          window.location.replace(target || '/')
+        }, 600)
+      })()
+    </script>
+  </body>
+</html>
