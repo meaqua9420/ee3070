@@ -1,0 +1,261 @@
+================================================================================
+INTERNATIONALIZATION (i18n) LANGUAGE BUGS - QUICK REFERENCE
+================================================================================
+EE3070 Smart Cat Home - Frontend (smart-cat-home)
+Generated: 2025-11-02
+
+================================================================================
+CRITICAL ISSUES - IMMEDIATE ACTION REQUIRED
+================================================================================
+
+BUG #1: ERRORBOUNDARY - BILINGUAL TEXT DISPLAY
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/ErrorBoundary.tsx
+Lines: 85, 88, 97, 128, 142
+Severity: CRITICAL
+Status: Shows BOTH Chinese and English text simultaneously
+
+Examples of problematic code:
+  Line 85:  "⚠️ 應用程式發生錯誤 / Application Error"
+  Line 88:  "抱歉，應用程式遇到了問題。請嘗試重新整理頁面."
+  Line 88:  "Sorry, the application encountered a problem. Please try refreshing the page."
+  Line 128: "重試 / Retry"
+  Line 142: "重新整理頁面 / Reload Page"
+
+Impact: User sees mixed Chinese/English UI regardless of language setting
+Fix: Replace bilingual strings with language-conditional rendering using t()
+
+---
+
+BUG #2: PLUGINMANAGERPANEL - BILINGUAL TEXT DISPLAY
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/PluginManagerPanel.tsx
+Lines: 67, 72, 80, 85, 88, 100, 109
+Severity: CRITICAL
+Status: Shows BOTH Chinese and English text simultaneously
+
+Examples of problematic code:
+  Line 67:  '更新中… / Loading…'
+  Line 72:  '尚未註冊任何插件。 / No plugins yet.'
+  Line 80:  '啟用 / Enabled' and '停用 / Disabled'
+  Line 85:  '功能 / Capabilities:'
+  Line 88:  'API：'
+  Line 100: '停用 / Disable' and '啟用 / Enable'
+  Line 109: '移除 / Remove'
+
+Impact: User always sees both Chinese and English in plugin manager
+Fix: Create translation keys and use t() function
+
+---
+
+BUG #3: AICHATPANEL - HARDCODED CHINESE QUICK ACTION PROMPTS
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/AiChatPanel.tsx
+Lines: 229, 233, 237, 241
+Severity: CRITICAL
+Status: Hardcoded Chinese prompts, not translatable
+
+Hardcoded strings:
+  Line 229: '請把溫度調成 24°C、濕度 52%，並確認 autoset 是否開啟。'
+  Line 233: '看看我家貓咪今天喝水量是否足夠，並給補水建議。'
+  Line 237: '等等我會上傳一張照片，請幫我分析環境是否舒適與安全。'
+  Line 241: '請幫我記住：早上 9 點餵食濕食、晚上 7 點餵食乾糧，貓咪喜歡雞肉口味。'
+
+Impact: Prompts cannot be translated, hardcoded in component
+Fix: Move prompts to translations.ts and use t()
+
+---
+
+BUG #4: AICHATPANEL - HARDCODED CHINESE TONE DETECTION KEYWORDS
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/AiChatPanel.tsx
+Lines: 275, 276, 277, 285, 286, 294, 295
+Severity: CRITICAL
+Status: Hardcoded Chinese keywords in function logic
+
+Hardcoded keywords:
+  Lines 275-277: '緊急', '注意', '警報' (urgent tone)
+  Lines 285-286: '恭喜', '太棒' (celebrate tone)
+  Lines 294-295: '放鬆', '安心' (calm tone)
+
+Impact: Tone detection logic depends on hardcoded strings
+Fix: Create configurable keyword list or translation-based keywords
+
+---
+
+================================================================================
+HIGH PRIORITY ISSUES - SHOULD FIX SOON
+================================================================================
+
+BUG #5: AICHATPANEL - HARDCODED VOICE SETTINGS LABELS
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/AiChatPanel.tsx
+Lines: 670, 689
+Severity: HIGH
+Status: Inline language ternary instead of i18n
+
+Code:
+  Line 670: <span>{language === 'zh' ? '語音' : 'Voice preset'}</span>
+  Line 689: aria-label={language === 'zh' ? '重新載入語音' : 'Refresh voices'}
+
+Impact: Bypasses i18n system, difficult to maintain
+Fix: Create translation keys and use t()
+
+---
+
+BUG #6: CAREINSIGHTSPANEL - HARDCODED TEXT WITH LANGUAGE TERNARY
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/CareInsightsPanel.tsx
+Lines: 62, 141, 146
+Severity: HIGH
+Status: Mixed inline ternary and hardcoded strings
+
+Code:
+  Line 62:  language === 'en' ? `Samples ${count}` : `樣本 ${count}`
+  Line 141: language === 'en' ? `· Reference ${baseline}` : `· 參考 ${baseline}`
+  Line 146: language === 'en' ? ` (${note})` : `（${note}）`
+
+Impact: Punctuation and formatting hardcoded per language
+Fix: Move strings to translations.ts and use t()
+
+---
+
+================================================================================
+MEDIUM PRIORITY ISSUES - CAN DEFER
+================================================================================
+
+BUG #7: CONTROLPANEL - HARDCODED FEEDER PLACEHOLDER
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/ControlPanel.tsx
+Line: 161
+Severity: MEDIUM
+
+Code:
+  const feederPlaceholder = language === 'zh' ? '08:00, 13:00, 20:00' : '08:00, 13:00, 20:00'
+
+Impact: Unnecessary ternary (same value for both branches)
+Fix: Remove ternary or use translation key
+
+---
+
+BUG #8: APP.TSX - HARDCODED FEEDING UNIT
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/App.tsx
+Line: 891
+Severity: MEDIUM
+
+Code:
+  const feedingUnit = language === 'zh' ? '分鐘' : 'min'
+
+Impact: Hardcoded instead of using t()
+Fix: Create translation key 'control.feedingUnit' and use t()
+
+---
+
+BUG #9: STATUSOVERVIEW - HARDCODED PUNCTUATION
+File: /Users/meaqua/Desktop/EE3070/smart-cat-home/src/components/StatusOverview.tsx
+Line: 123
+Severity: LOW
+
+Code:
+  .join(language === 'zh' ? '、' : ', ')
+
+Impact: Acceptable for punctuation variance
+Note: Can be left as-is, not user-facing text
+
+---
+
+================================================================================
+SUMMARY STATISTICS
+================================================================================
+
+Total Bugs Found: 9
+- Critical: 4
+- High: 2
+- Medium: 2
+- Low: 1
+
+Files Affected: 6
+- AiChatPanel.tsx (4 bugs)
+- ErrorBoundary.tsx (1 bug)
+- PluginManagerPanel.tsx (1 bug)
+- CareInsightsPanel.tsx (1 bug)
+- ControlPanel.tsx (1 bug)
+- App.tsx (1 bug)
+- StatusOverview.tsx (1 bug)
+
+Hardcoded Chinese Strings: 15+
+Hardcoded English Strings: 10+
+Bilingual Mixed Strings: 20+
+Language Ternaries Misused: 8
+
+---
+
+================================================================================
+ROOT CAUSE ANALYSIS
+================================================================================
+
+1. Inconsistent i18n Implementation
+   - Some components use t() function
+   - Others use inline language ternaries
+   - Some use hardcoded bilingual fallbacks
+
+2. Mixed Patterns in Same Component
+   - AiChatPanel: labels use t(), but prompts hardcoded
+   - ErrorBoundary: all text hardcoded bilingual
+
+3. Developer Oversight
+   - Components added without i18n review
+   - No enforcement of i18n patterns in code review
+
+4. Architecture Gap
+   - ErrorBoundary not wrapped in LanguageProvider
+   - Cannot access language context
+
+5. Hardcoded Keywords Logic
+   - Tone detection depends on hardcoded Chinese strings
+   - Not parameterized or i18n-driven
+
+---
+
+================================================================================
+RECOMMENDED FIX PRIORITY
+================================================================================
+
+Priority 1 (Week 1):
+  - Fix ErrorBoundary bilingual text
+  - Fix PluginManagerPanel bilingual text
+  - Fix AiChatPanel quick action prompts
+
+Priority 2 (Week 2):
+  - Fix AiChatPanel tone detection keywords
+  - Fix AiChatPanel voice settings labels
+  - Fix CareInsightsPanel hardcoded text
+
+Priority 3 (Week 3):
+  - Fix ControlPanel feeder placeholder
+  - Fix App.tsx feeding unit
+  - Code review other components
+
+---
+
+================================================================================
+IMPLEMENTATION GUIDE
+================================================================================
+
+Step 1: Add Translation Keys to translations.ts
+  - Create new keys in TranslationKey type union
+  - Add Chinese translations to zh bundle
+  - Add English translations to en bundle
+
+Step 2: Remove Hardcoded Text
+  - Replace hardcoded strings with t('key')
+  - Remove inline language ternaries
+  - Remove bilingual fallback patterns
+
+Step 3: Fix ErrorBoundary
+  - Move ErrorBoundary inside LanguageProvider
+  - Or pass translations as prop
+  - Use language-conditional rendering
+
+Step 4: Test
+  - Verify language switching works
+  - Confirm no bilingual text appears
+  - Check all text displays in selected language
+
+---
+
+FULL DETAILED REPORT: /Users/meaqua/Desktop/i18n_ANALYSIS_REPORT.md
+

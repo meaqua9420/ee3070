@@ -1,0 +1,22 @@
+model: /Users/meaqua/Desktop/EE3070/models/gpt-oss-20b
+train: true
+data: /Users/meaqua/Desktop/EE3070/smart-cat-backend/datasets/pro-finetune
+adapter_path: /Users/meaqua/Desktop/EE3070/models/gpt-oss-20b-smart-cat-mlx-lora-v4
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true
+num_layers: -1
+batch_size: 1
+grad_accumulation_steps: 8
+iters: 640
+val_batches: -1
+learning_rate: 0.00003
+steps_per_report: 20
+steps_per_eval: 80
+save_every: 160
+max_seq_length: 2048
+grad_checkpoint: true
+lora_parameters:
+  rank: 32
+  dropout: 0.05
+  scale: 32.0

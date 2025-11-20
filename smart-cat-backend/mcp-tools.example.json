@@ -1,0 +1,335 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.searchKnowledgeBase",
+      "description": "向本地 MCP 知識庫搜尋特定主題，回傳最相關的 3 筆摘要。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "要查詢的關鍵字或問題" },
+          "lang": { "type": "string", "enum": ["zh", "en"], "description": "回覆語言" },
+          "limit": { "type": "number", "minimum": 1, "maximum": 5 }
+        },
+        "required": ["query"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.fetchTaskStatus",
+      "description": "取得外部自動化系統的任務狀態，並提供建議的下一步。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string" },
+          "includeTimeline": { "type": "boolean" }
+        },
+        "required": ["taskId"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.fetchSnapshotRange",
+      "description": "查詢指定貓咪在一段時間內的感測摘要（溫度、濕度、水位與警報）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "catId": { "type": "string" },
+          "start": { "type": "string", "description": "ISO datetime" },
+          "end": { "type": "string", "description": "ISO datetime" },
+          "limit": { "type": "number", "minimum": 1, "maximum": 72 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.listHydrationAnomalies",
+      "description": "列出近期飲水異常事件（低水位或飲水量不足）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "catId": { "type": "string" },
+          "lookbackHours": { "type": "number", "minimum": 1, "maximum": 168 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.triggerCalibrationReminder",
+      "description": "排程感測器校正提醒，可指定通知管道與預估時間。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sensor": { "type": "string" },
+          "reminderChannel": { "type": "string", "enum": ["notification", "task"] },
+          "etaMinutes": { "type": "number", "minimum": 5, "maximum": 1440 },
+          "note": { "type": "string" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.syncCareTaskToNotion",
+      "description": "把 Care Command Center 的任務同步到外部 Notion/Todo board。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string" },
+          "targetBoard": { "type": "string" },
+          "notifyEmail": { "type": "string" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["taskId"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.runCodexTask",
+      "description": "呼叫本機 Codex CLI `codex exec` 完成指定的程式碼分析或修改工作。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": { "type": "string" },
+          "cwd": { "type": "string" },
+          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"] },
+          "fullAuto": { "type": "boolean" },
+          "jsonMode": { "type": "boolean" },
+          "timeoutMs": { "type": "number", "minimum": 5000, "maximum": 300000 }
+        },
+        "required": ["prompt"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.listAppleShortcuts",
+      "description": "列出本機 Apple Shortcuts 應用程式中的捷徑（依照系統 `shortcuts list` 指令）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "filter": { "type": "string", "description": "可選的捷徑名稱關鍵字" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.runAppleShortcut",
+      "description": "執行指定名稱的 Apple Shortcut，必要時可附帶輸入字串。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "input": { "type": "string" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.graph.query",
+      "description": "查詢 Neo4j/RedisGraph 知識圖譜，回傳符合條件的節點與關聯摘要。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "可選的全文關鍵字" },
+          "subject": { "type": "string", "description": "節點 ID 或名稱（例如 cat:neko）" },
+          "predicate": { "type": "string", "description": "關係名稱，例如 prefers_temp_range" },
+          "object": { "type": "string", "description": "節點 ID 或型態" },
+          "limit": { "type": "number", "minimum": 1, "maximum": 12 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.graph.upsert",
+      "description": "寫入或更新知識圖譜中的 fact（subject-predicate-object）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject": { "type": "string" },
+          "predicate": { "type": "string" },
+          "object": { "type": "string" },
+          "subjectType": { "type": "string" },
+          "objectType": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "metadata": { "type": "object", "additionalProperties": true },
+          "source": { "type": "string" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["subject", "predicate", "object"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.fs.list",
+      "description": "列出允許目錄內的檔案/資料夾，支援遞迴瀏覽。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "recursive": { "type": "boolean" },
+          "includeHidden": { "type": "boolean" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.fs.read",
+      "description": "讀取指定檔案內容，可自訂編碼與最大位元組數。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "encoding": { "type": "string" },
+          "maxBytes": { "type": "number", "minimum": 256, "maximum": 2000000 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["path"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.fs.write",
+      "description": "在白名單目錄內寫入檔案（需 MCP_FS_ALLOW_WRITE=1）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "content": { "type": "string" },
+          "encoding": { "type": "string" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["path", "content"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.analytics.summarize",
+      "description": "針對指定貓咪與指標計算平均/極值/標準差等統計。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "catId": { "type": "string" },
+          "metric": { "type": "string", "enum": ["temperature", "humidity", "water"] },
+          "hours": { "type": "number", "minimum": 1, "maximum": 168 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.analytics.regression",
+      "description": "以線性回歸推估趨勢斜率，用於偵測溫度/濕度/水位變化。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "catId": { "type": "string" },
+          "metric": { "type": "string", "enum": ["temperature", "humidity", "water"] },
+          "hours": { "type": "number", "minimum": 1, "maximum": 168 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.cdp.fetchProfile",
+      "description": "讀取客戶資料平台中的飼主 / 貓咪設定與通知偏好。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string" },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["customerId"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.cdp.logEvent",
+      "description": "向客戶資料平台紀錄事件（如推播授權、客服票）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string" },
+          "eventType": { "type": "string" },
+          "channel": { "type": "string" },
+          "properties": { "type": "object", "additionalProperties": true },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["customerId", "eventType"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.browser.fetchPage",
+      "description": "透過 MCP 瀏覽器代理抓取允許網域並輸出摘要文字。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string" },
+          "summarySentences": { "type": "number", "minimum": 1, "maximum": 8 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["url"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mcp.browser.search",
+      "description": "呼叫 Search MCP（或內建索引）搜尋外部資訊來源，回傳前 N 筆結果。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "number", "minimum": 1, "maximum": 10 },
+          "lang": { "type": "string", "enum": ["zh", "en"] }
+        },
+        "required": ["query"]
+      }
+    }
+  }
+]

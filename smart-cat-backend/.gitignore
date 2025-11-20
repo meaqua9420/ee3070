@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.backup
+smart-cat-home.db*
+tmp_payload.json
+*.tmp

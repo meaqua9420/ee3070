@@ -1,0 +1,194 @@
+// 🔧 ESP8266 WiFi POST Fix Patch
+// 修复 cipsendFailed 错误 / Fix cipsendFailed error
+
+// ========================================
+// 方案 1：增加重试机制（推荐）
+// ========================================
+
+// 在 esp8266HttpRequest 函数中（line 2265 附近），修改如下：
+
+bool esp8266HttpRequest(const char* method, const String& path, const String& body, const char* contentType, int& statusCode, String& responseBody, String* rawResponseOut) {
+  // 🔧 添加重试机制 - 最多重试 2 次
+  const int MAX_RETRIES = 2;
+
+  for (int retry = 0; retry <= MAX_RETRIES; retry++) {
+    if (retry > 0) {
+      Serial.print(F("{\"info\":\"retrying\",\"attempt\":"));
+      Serial.print(retry + 1);
+      Serial.println(F("}"));
+
+      // 🔧 重试前清理 ESP8266 缓冲区
+      esp8266SendCommand(F("AT+CIPCLOSE"), "OK", "ERROR", 1000);
+      delay(500);  // 增加延迟
+      while (esp8266.available()) {
+        esp8266.read();
+      }
+    }
+
+    if (!wifiConnected && !esp8266EnsureWifi()) {
+      if (retry < MAX_RETRIES) continue;  // 🔧 重试
+      return false;
+    }
+
+    // 🔧 确保之前的连接已关闭
+    esp8266SendCommand(F("AT+CIPCLOSE"), "OK", "ERROR", 1000);
+    delay(100);  // 增加延迟
+
+    char startCmd[64];
+    snprintf(startCmd, sizeof(startCmd), "AT+CIPSTART=\"TCP\",\"%s\",%u", BACKEND_HOST, BACKEND_PORT);
+    bool started = esp8266SendCommand(String(startCmd), "OK", "ALREADY CONNECTED", 10000);
+    if (!started) {
+      Serial.println(F("{\"error\":\"tcpConnectFailed\"}"));
+      esp8266SendCommand(F("AT+CIPCLOSE"), "OK", nullptr, 1000);
+      if (retry < MAX_RETRIES) continue;  // 🔧 重试
+      return false;
+    }
+
+    // 🔧 等待连接稳定
+    delay(200);
+
+    String request;
+    request.reserve(body.length() + 256);
+    request += method;
+    request += ' ';
+    request += path;
+    request += F(" HTTP/1.1\r\nHost: ");
+    request += BACKEND_HOST;
+    request += F("\r\nUser-Agent: SmartCatBridge/");
+    request += F(FIRMWARE_VERSION);
+    request += F("\r\nConnection: close");
+    if (contentType && *contentType) {
+      request += F("\r\nContent-Type: ");
+      request += contentType;
+    }
+    if (strlen(BACKEND_API_KEY) > 0) {
+      request += F("\r\nAuthorization: Bearer ");
+      request += BACKEND_API_KEY;
+    }
+    if (body.length() > 0) {
+      request += F("\r\nContent-Length: ");
+      request += body.length();
+    }
+    request += F("\r\n\r\n");
+    request += body;
+
+    String sendCmd = String(F("AT+CIPSEND=")) + request.length();
+    // 🔧 增加超时时间 3000 → 5000ms
+    if (!esp8266SendCommand(sendCmd, ">", nullptr, 5000)) {
+      Serial.println(F("{\"error\":\"cipsendFailed\"}"));
+      esp8266SendCommand(F("AT+CIPCLOSE"), "OK", nullptr, 1000);
+      if (retry < MAX_RETRIES) continue;  // 🔧 重试
+      return false;
+    }
+
+    esp8266.print(request);
+    // 🔧 增加 SEND OK 超时 10000 → 15000ms
+    bool sendOk = esp8266WaitFor("SEND OK", nullptr, 15000);
+
+    // Capture entire response (all +IPD segments) until CLOSED token or extended idle
+    String rawResponse;
+    const unsigned long RESPONSE_IDLE_TIMEOUT_MS = 2500;
+    const unsigned long RESPONSE_MAX_DURATION_MS = 9000;
+    unsigned long lastByte = millis();
+    unsigned long overallStart = lastByte;
+    bool sawClosedToken = false;
+    while ((millis() - overallStart) < RESPONSE_MAX_DURATION_MS) {
+      bool dataRead = false;
+      while (esp8266.available()) {
+        char c = esp8266.read();
+        lastByte = millis();
+        dataRead = true;
+        if (rawResponse.length() < ESP8266_HTTP_RESPONSE_MAX) {
+          rawResponse += c;
+        }
+        const size_t len = rawResponse.length();
+        if (len >= 6 &&
+            rawResponse.charAt(len - 1) == 'D' &&
+            rawResponse.charAt(len - 2) == 'E' &&
+            rawResponse.charAt(len - 3) == 'S' &&
+            rawResponse.charAt(len - 4) == 'O' &&
+            rawResponse.charAt(len - 5) == 'L' &&
+            rawResponse.charAt(len - 6) == 'C') {
+          sawClosedToken = true;
+          break;
+        }
+      }
+      if (sawClosedToken) {
+        break;
+      }
+      if (!dataRead && (millis() - lastByte) > RESPONSE_IDLE_TIMEOUT_MS) {
+        break;
+      }
+    }
+
+    esp8266SendCommand(F("AT+CIPCLOSE"), "OK", "ERROR", 1000, false);
+    while (esp8266.available()) {
+      esp8266.read();
+    }
+
+    if (rawResponseOut) {
+      *rawResponseOut = rawResponse;
+    }
+
+    if (!sendOk && rawResponse.length() == 0) {
+      Serial.println(F("{\"error\":\"httpNoResponse\"}"));
+      if (retry < MAX_RETRIES) continue;  // 🔧 重试
+      return false;
+    }
+
+    // 🔧 如果成功，跳出重试循环
+    if (sendOk || rawResponse.length() > 0) {
+      // 继续解析响应（原有代码）
+      // ... (后续代码保持不变)
+      return true;  // 暂时返回，实际需要继续解析响应
+    }
+  }
+
+  return false;  // 所有重试都失败
+}
+
+
+// ========================================
+// 方案 2：临时应急方案（如果方案1太复杂）
+// ========================================
+
+// 只修改超时时间，不添加重试：
+
+// Line 2307: 超时 3000 → 5000ms
+if (!esp8266SendCommand(sendCmd, ">", nullptr, 5000)) {
+
+// Line 2314: 超时 10000 → 15000ms
+bool sendOk = esp8266WaitFor("SEND OK", nullptr, 15000);
+
+// Line 2270: 增加关闭延迟 50 → 200ms
+delay(200);
+
+
+// ========================================
+// 方案 3：定期清理 ESP8266 缓冲区
+// ========================================
+
+// 在 loop() 函数中添加定期清理：
+
+unsigned long lastEsp8266Cleanup = 0;
+const unsigned long ESP8266_CLEANUP_INTERVAL = 60000;  // 每60秒
+
+void loop() {
+  unsigned long now = millis();
+
+  // ... 原有代码 ...
+
+  #if ENABLE_ESP8266
+  if (now - lastEsp8266Cleanup > ESP8266_CLEANUP_INTERVAL) {
+    lastEsp8266Cleanup = now;
+    // 清理 ESP8266 缓冲区
+    while (esp8266.available()) {
+      esp8266.read();
+    }
+    // 检查连接状态
+    esp8266SendCommand(F("AT+CIPSTATUS"), "OK", nullptr, 1000);
+  }
+  #endif
+
+  // ... 原有代码 ...
+}

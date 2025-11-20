@@ -1,0 +1,81 @@
+# =============================================
+# Smart Cat Home Project - Root .gitignore
+# =============================================
+
+# 🔒 CRITICAL: Never commit sensitive files
+# These files contain passwords, API keys, and private data
+*.env
+*.env.local
+*.env.backup
+credentials.h
+camera_credentials.h
+credentials.h.backup
+google-services.json
+GoogleService-Info.plist
+**/google-services.json
+**/GoogleService-Info.plist
+config/firebase*.json
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Temporary Files
+*.tmp
+tmp/
+temp/
+*.bak
+*.backup
+
+# Database Files (local development only)
+*.db
+*.sqlite
+*.sqlite3
+
+# Build Outputs
+dist/
+build/
+out/
+
+# Dependencies
+node_modules/
+mcp-server-apple-shortcuts/
+models/
+fine-tune-qwen3/
+hf-cache/
+.venv*/
+venv/
+ios/
+android/
+dist/
+node_modules/
+*.pem
+*.key
+*.db
+.env*
+arduino/smart_cat_serial_bridge/credentials.h

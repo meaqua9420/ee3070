@@ -1,0 +1,17 @@
+# Arduino 编译输出 / Arduino build output
+*.hex
+*.elf
+*.bin
+*.o
+*.a
+
+# 敏感配置文件 / Sensitive configuration files
+# ⚠️ 重要：credentials.h 包含 WiFi 密码，绝不能提交到 Git
+# IMPORTANT: credentials.h contains WiFi passwords, must never be committed
+credentials.h
+
+# Arduino IDE 临时文件 / Arduino IDE temporary files
+.DS_Store
+*.swp
+*.swo
+*~

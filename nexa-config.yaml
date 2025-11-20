@@ -1,0 +1,11 @@
+models:
+  - id: smart-cat-catcare-vl-q4
+    type: vlm
+    format: gguf
+    path: /Users/meaqua/models/smart-cat-catcare-vl-q4/smart-cat-catcare-vl-q4-q4_k_m.gguf
+    ngl: 0
+  - id: NexaAI/Qwen3-4B-Thinking-2507-merged
+    type: llm
+    format: gguf
+    path: /Users/meaqua/models/Qwen3-4B-Thinking-2507-merged/Qwen3-4B-Thinking-2507-merged-q4_0.gguf
+    ngl: 0

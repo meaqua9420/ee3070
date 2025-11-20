@@ -1,0 +1,61 @@
+[
+  {
+    "id": "fact-neko-sneeze",
+    "subject": "cat:neko",
+    "predicate": "recorded_symptom",
+    "object": "symptom:sneeze",
+    "subjectType": "Cat",
+    "objectType": "Symptom",
+    "confidence": 0.82,
+    "lastSeen": "2025-11-08T04:31:19.447Z",
+    "metadata": {
+      "severity": "mild",
+      "location": "living_room"
+    },
+    "source": "snapshot:hydration-baseline"
+  },
+  {
+    "id": "fact-neko-vet",
+    "subject": "cat:neko",
+    "predicate": "visited_vet_on",
+    "object": "event:vet-2024-10-12",
+    "subjectType": "Cat",
+    "objectType": "Event",
+    "confidence": 0.94,
+    "lastSeen": "2024-10-12T03:15:00.000Z",
+    "metadata": {
+      "clinic": "Sunrise Vet",
+      "reason": "seasonal rhinitis"
+    },
+    "source": "care-log#8831"
+  },
+  {
+    "id": "fact-neko-prefers-temp",
+    "subject": "cat:neko",
+    "predicate": "prefers_temp_range",
+    "object": "range:23-26C",
+    "subjectType": "Cat",
+    "objectType": "Range",
+    "confidence": 0.71,
+    "lastSeen": "2025-11-09T03:31:19.447Z",
+    "metadata": {
+      "trigger": "care-report",
+      "adjustedFrom": "24-27C"
+    },
+    "source": "professional-report#41"
+  },
+  {
+    "id": "fact-habitat-humidity",
+    "subject": "habitat:living-room",
+    "predicate": "target_humidity",
+    "object": "range:50-60%",
+    "subjectType": "Habitat",
+    "objectType": "Range",
+    "confidence": 0.9,
+    "lastSeen": "2025-11-09T04:31:19.447Z",
+    "metadata": {
+      "derivedFrom": "sensor-calibration"
+    },
+    "source": "calibration#2024-11-01"
+  }
+]
