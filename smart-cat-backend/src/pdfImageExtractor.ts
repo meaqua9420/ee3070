@@ -30,10 +30,21 @@ export async function extractImagesFromPDF(fileId: string): Promise<ExtractedIma
     for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
       const page = pdfDoc.getPage(pageIndex)
 
-      // 获取页面内容
-      const { Resources } = page.node.normalized()
+      // 兼容新版 pdf-lib：避免直接呼叫 normalized()
+      const rawResources =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (page as any)?.node?.get?.('Resources') ??
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (page as any)?.node?.dict?.get?.('Resources')
 
-      if (!Resources) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Resources = rawResources && (pdfDoc as any).context?.lookup
+        ? // 如果是 Ref，lookup 取得實體
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (pdfDoc as any).context.lookup(rawResources)
+        : rawResources
+
+      if (!Resources || typeof Resources.get !== 'function') {
         console.log(`[pdfImageExtractor] Page ${pageIndex + 1}: No resources found`)
         continue
       }
@@ -51,7 +62,14 @@ export async function extractImagesFromPDF(fileId: string): Promise<ExtractedIma
       let imageIndexInPage = 0
 
       for (const key of xObjectKeys) {
-        const xObject = xObjects.get(key)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rawXObject = (xObjects as any).get ? (xObjects as any).get(key) : null
+        // 如果是 Ref，lookup 取得實體
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const xObject = rawXObject && (pdfDoc as any).context?.lookup
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (pdfDoc as any).context.lookup(rawXObject)
+          : rawXObject
 
         if (!xObject) continue
 
@@ -63,12 +81,19 @@ export async function extractImagesFromPDF(fileId: string): Promise<ExtractedIma
             const imageData = await extractImageData(xObject, pdfDoc)
 
             if (imageData) {
+              const widthVal =
+                xObject?.get?.('Width') ??
+                xObject?.dict?.get?.('Width')
+              const heightVal =
+                xObject?.get?.('Height') ??
+                xObject?.dict?.get?.('Height')
+
               images.push({
                 imageData,
                 index: images.length,
                 pageNumber: pageIndex + 1,
-                width: xObject.get('Width')?.numberValue,
-                height: xObject.get('Height')?.numberValue,
+                width: widthVal?.numberValue ?? widthVal?.value,
+                height: heightVal?.numberValue ?? heightVal?.value,
               })
 
               console.log(
@@ -94,7 +119,8 @@ export async function extractImagesFromPDF(fileId: string): Promise<ExtractedIma
     return images
   } catch (error) {
     console.error('[pdfImageExtractor] Error extracting images from PDF:', error)
-    throw new Error('Failed to extract images from PDF')
+    // 不要讓圖片解析阻斷 PDF 流程，改回傳空陣列並記錄錯誤
+    return []
   }
 }
 
@@ -103,8 +129,16 @@ export async function extractImagesFromPDF(fileId: string): Promise<ExtractedIma
  */
 async function extractImageData(xObject: any, pdfDoc: PDFDocument): Promise<Buffer | null> {
   try {
+    const getVal = (key: string) =>
+      xObject?.get?.(key) ??
+      xObject?.dict?.get?.(key)
+
     // 获取图片的压缩流
-    const stream = xObject.getStream()
+    const stream =
+      xObject?.getStream?.() ??
+      xObject?.getContents?.?.() ??
+      xObject?.contents ??
+      xObject?.get?.('Contents')
 
     if (!stream) {
       return null
@@ -118,8 +152,8 @@ async function extractImageData(xObject: any, pdfDoc: PDFDocument): Promise<Buff
     }
 
     // 检查图片格式
-    const colorSpace = xObject.get('ColorSpace')
-    const filter = xObject.get('Filter')
+    const colorSpace = getVal('ColorSpace')
+    const filter = getVal('Filter')
 
     // 如果是JPEG格式,直接返回
     if (filter && filter.toString().includes('DCTDecode')) {
