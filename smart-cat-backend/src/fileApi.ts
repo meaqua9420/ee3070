@@ -13,13 +13,19 @@ import {
   type FileMetadata,
   type ParsedFile,
 } from './fileHandler.js'
-import { extractTextFromPDF, analyzePDFWithAI, detectPetRelated, type PDFAnalysisResult } from './pdfParser.js'
+import {
+  extractTextFromPDF,
+  analyzePDFWithAI,
+  detectPetRelated,
+  type PDFAnalysisResult,
+} from './pdfParser.js'
 import { extractImagesFromPDF, imageToBase64, type ExtractedImage } from './pdfImageExtractor.js'
 import { analyzePDFWithUltraMode, type UltraPDFAnalysisResult } from './pdfUltraAnalyzer.js'
 import { analyzeAudioWithAI, type AudioAnalysisResult } from './audioAnalyzer.js'
 import { analyzeVideoWithAI, type VideoAnalysisResult } from './videoProcessor.js'
 import { generateChatContent, analyzeImageWithQwen } from './ai.js'
 import { getDb } from './db.js'
+import mammoth from 'mammoth'
 
 function currentUserId(req: Request): string | null {
   return typeof req.authUser?.username === 'string' ? req.authUser.username : null
@@ -352,6 +358,59 @@ export async function handleFileAnalyze(req: Request, res: Response) {
             imageCount: extractedImages.length,
             imageAnalyses: imageAnalyses.length > 0 ? imageAnalyses : undefined,
           }
+        }
+
+        break
+      }
+
+      case 'docx': {
+        // 先轉出文字
+        const buffer = await readFileBuffer(id)
+        const mammothResult = await mammoth.extractRawText({ buffer })
+        const extractedText = (mammothResult.value || '').trim()
+
+        // 寵物相關性檢查
+        const hasPetContext = detectPetRelated(extractedText)
+        if (!hasPetContext) {
+          res.status(400).json({
+            success: false,
+            error: 'docx-not-pet-related',
+          })
+          return
+        }
+
+        // 模型選擇
+        let actualModelPreference: 'auto' | 'standard' | 'pro' = 'auto'
+        let reasoningEffort: 'low' | 'medium' | 'high' = 'medium'
+
+        if (modelPreference === 'pro') {
+          actualModelPreference = 'pro'
+          reasoningEffort = 'high'
+        } else if (modelPreference === 'standard') {
+          actualModelPreference = 'standard'
+          reasoningEffort = 'low'
+        }
+
+        const generateFn = async (prompt: string) => {
+          const result = await generateChatContent({
+            question: prompt,
+            language: 'zh',
+            modelPreference: actualModelPreference,
+            reasoningEffort: reasoningEffort,
+            snapshot: null,
+            history: [],
+          })
+          return result.text
+        }
+
+        const analysis = await analyzePDFWithAI(extractedText, generateFn)
+        analysisResult = {
+          type: 'docx',
+          summary: analysis.summary,
+          pageCount: analysis.pageCount,
+          extractedText: extractedText.slice(0, 500) + '...',
+          medicalInfo: analysis.medicalInfo,
+          confidence: 0.85,
         }
 
         break
