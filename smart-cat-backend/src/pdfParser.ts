@@ -1,5 +1,6 @@
 // PDF 解析模組
 import { readFile } from './fileHandler.js'
+// Note: pdf-parse is a CommonJS module, will be imported dynamically
 
 export interface PDFAnalysisResult {
   pageCount: number
@@ -21,40 +22,67 @@ export interface PDFAnalysisResult {
   }
 }
 
-// 簡易 PDF 文字提取 (使用正則表達式)
-// 注意: 這是簡化版本,生產環境建議使用 pdf-parse 或 pdfjs-dist
+// 使用 pdf-parse 專業庫提取 PDF 文字
+// 支援各種 PDF 格式,包括複雜編碼、字體嵌入、壓縮等
 export async function extractTextFromPDF(fileId: string): Promise<string> {
   try {
     const buffer = await readFile(fileId)
 
-    // 簡單的 PDF 文字提取 (尋找 stream 物件中的文字)
-    const text = buffer.toString('latin1')
+    // 動態導入 pdf-parse (CommonJS 模塊)
+    const pdfParseModule = (await import('pdf-parse')) as any
+    // 兼容 default / module.exports / PDFParse
+    const pdfParseFn =
+      pdfParseModule?.default ||
+      pdfParseModule?.PDFParse ||
+      pdfParseModule
 
-    // 提取所有可能的文字內容
-    const textMatches = text.match(/\(([^)]+)\)/g)
+    if (typeof pdfParseFn !== 'function') {
+      throw new Error('pdf-parse module not loaded correctly')
+    }
 
-    if (!textMatches) {
+    // 使用 pdf-parse 解析 PDF
+    const pdfData = await pdfParseFn(buffer, {
+      // 配置選項:最大緩衝區大小 (50MB)
+      max: 50 * 1024 * 1024,
+      // 提取版本資訊
+      version: 'default'
+    })
+
+    // pdf-parse 返回的資料結構:
+    // - text: 提取的所有文字內容
+    // - numpages: 頁數
+    // - info: PDF 元資料 (標題、作者、建立日期等)
+    // - metadata: XMP 元資料
+
+    // 清理提取的文字
+    let extractedText = pdfData.text.trim()
+
+    // 移除多餘的空白和換行
+    extractedText = extractedText
+      .replace(/\r\n/g, '\n')  // 統一換行符
+      .replace(/\n{3,}/g, '\n\n')  // 最多保留兩個連續換行
+      .replace(/ {2,}/g, ' ')  // 移除多餘空格
+
+    // 檢查是否成功提取文字
+    if (!extractedText || extractedText.length < 10) {
+      console.warn(`[PDF] Extracted text too short (${extractedText.length} chars), PDF may be scanned or image-based`)
       return ''
     }
 
-    let extractedText = ''
-    for (const match of textMatches) {
-      const content = match.slice(1, -1) // 移除括號
-      // 解碼 PDF 編碼
-      const decoded = content
-        .replace(/\\n/g, '\n')
-        .replace(/\\r/g, '\r')
-        .replace(/\\t/g, '\t')
-        .replace(/\\\\/g, '\\')
-        .replace(/\\([()])/g, '$1')
+    console.log(`[PDF] Successfully extracted ${extractedText.length} characters from ${pdfData.numpages} pages`)
 
-      extractedText += decoded + ' '
-    }
-
-    return extractedText.trim()
+    return extractedText
   } catch (error) {
-    console.error('PDF text extraction error:', error)
-    throw new Error('Failed to extract text from PDF')
+    console.error('[PDF] Text extraction error:', error)
+    // 提供更詳細的錯誤訊息
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid PDF')) {
+        throw new Error('無效的 PDF 文件格式')
+      } else if (error.message.includes('Encrypted')) {
+        throw new Error('PDF 文件已加密,無法提取文字')
+      }
+    }
+    throw new Error('無法從 PDF 提取文字,文件可能已損壞或為掃描版')
   }
 }
 
@@ -213,22 +241,42 @@ export function extractKeywords(text: string, topN: number = 10): string[] {
   return sorted
 }
 
-// 完整的 PDF 分析流程
+// 完整的 PDF 分析流程 (改進版本,獲取完整元資料)
 export async function analyzePDF(
   fileId: string,
   generateFn: (prompt: string) => Promise<string>
 ): Promise<PDFAnalysisResult> {
-  // 1. 提取文字
-  const extractedText = await extractTextFromPDF(fileId)
+  // 1. 提取文字和元資料
+  const buffer = await readFile(fileId)
+
+  // 動態導入 pdf-parse (CommonJS 模塊)
+  // pdf-parse 導出 PDFParse 命名導出
+  const pdfParseModule = await import('pdf-parse') as any
+  const pdfParse = pdfParseModule.PDFParse
+
+  const pdfData = await pdfParse(buffer, {
+    max: 50 * 1024 * 1024,
+    version: 'default'
+  })
+
+  const extractedText = pdfData.text.trim()
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/ {2,}/g, ' ')
 
   if (!extractedText || extractedText.length < 10) {
-    throw new Error('PDF appears to be empty or unreadable')
+    throw new Error('PDF appears to be empty or unreadable (可能是掃描版或圖片型 PDF)')
   }
+
+  console.log(`[PDF] Analyzing PDF: ${pdfData.numpages} pages, ${extractedText.length} characters`)
 
   // 2. 使用 AI 分析
   const analysis = await analyzePDFWithAI(extractedText, generateFn)
 
-  // 3. 增強分析結果
+  // 3. 使用真實的頁數 (來自 pdf-parse)
+  analysis.pageCount = pdfData.numpages
+
+  // 4. 增強分析結果 - 醫療報告檢測
   if (detectMedicalReport(extractedText)) {
     // 如果 AI 沒有檢測到醫療資訊,嘗試手動提取
     if (!analysis.medicalInfo) {
@@ -239,10 +287,15 @@ export async function analyzePDF(
     }
   }
 
-  // 4. 添加元資料
+  // 5. 添加 PDF 元資料 (從 pdf-parse 獲取)
   analysis.metadata = {
+    title: pdfData.info?.Title,
+    author: pdfData.info?.Author,
+    creationDate: pdfData.info?.CreationDate,
     keywords: extractKeywords(extractedText)
   }
+
+  console.log(`[PDF] Analysis complete: ${analysis.pageCount} pages, medical: ${!!analysis.medicalInfo}`)
 
   return analysis
 }
