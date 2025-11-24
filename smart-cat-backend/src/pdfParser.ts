@@ -211,6 +211,28 @@ export function detectMedicalReport(text: string): boolean {
   return matchCount >= 3
 }
 
+// 檢查是否與寵物/貓狗鳥照護相關
+export function detectPetRelated(text: string): boolean {
+  const petKeywords = [
+    // 中文
+    '貓', '貓咪', '犬', '狗', '寵物', '鳥', '鸚鵡', '貓砂', '貓砂盆', '餵食', '飲水',
+    '寵物屋', '智慧貓屋', '貓砂清理', '貓咪健康', '獸醫',
+    // 英文
+    'cat', 'feline', 'kitty', 'dog', 'canine', 'pet', 'bird', 'parrot',
+    'litter', 'litter box', 'feeder', 'water bowl', 'hydration', 'vet', 'veterinarian',
+  ]
+
+  const lowerText = text.toLowerCase()
+  let matchCount = 0
+  for (const keyword of petKeywords) {
+    if (keyword && lowerText.includes(keyword.toLowerCase())) {
+      matchCount++
+    }
+  }
+  // 至少找到 2 個關鍵詞才視為相關
+  return matchCount >= 2
+}
+
 // 估算頁數 (基於文字長度)
 export function estimatePageCount(text: string): number {
   const avgCharsPerPage = 2000 // 假設每頁平均 2000 字元

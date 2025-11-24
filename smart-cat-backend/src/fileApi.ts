@@ -13,7 +13,7 @@ import {
   type FileMetadata,
   type ParsedFile,
 } from './fileHandler.js'
-import { extractTextFromPDF, analyzePDFWithAI, type PDFAnalysisResult } from './pdfParser.js'
+import { extractTextFromPDF, analyzePDFWithAI, detectPetRelated, type PDFAnalysisResult } from './pdfParser.js'
 import { extractImagesFromPDF, imageToBase64, type ExtractedImage } from './pdfImageExtractor.js'
 import { analyzePDFWithUltraMode, type UltraPDFAnalysisResult } from './pdfUltraAnalyzer.js'
 import { analyzeAudioWithAI, type AudioAnalysisResult } from './audioAnalyzer.js'
@@ -253,6 +253,16 @@ export async function handleFileAnalyze(req: Request, res: Response) {
               analysis: '圖片分析失敗',
             })
           }
+        }
+
+        // 若文字與圖片皆無寵物相關內容則拒絕分析
+        const hasPetContext = detectPetRelated(extractedText)
+        if (!hasPetContext && imageAnalyses.length === 0) {
+          res.status(400).json({
+            success: false,
+            error: 'pdf-not-pet-related',
+          })
+          return
         }
 
         // 合并文字和图片分析结果
