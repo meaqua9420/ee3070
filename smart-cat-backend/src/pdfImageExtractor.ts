@@ -136,7 +136,7 @@ async function extractImageData(xObject: any, pdfDoc: PDFDocument): Promise<Buff
     // 获取图片的压缩流
     const stream =
       xObject?.getStream?.() ??
-      xObject?.getContents?.?.() ??
+      (xObject?.getContents ? xObject.getContents() : null) ??
       xObject?.contents ??
       xObject?.get?.('Contents')
 

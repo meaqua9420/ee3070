@@ -472,6 +472,10 @@ export function sanitizeModelResponse(text: string, language: LanguageCode = 'zh
     .filter((line) => !/^we (?:need to|should|must|can|could)\b/i.test(line))
     .filter((line) => !/^i (?:should|need to|must|will|can)\b/i.test(line))
     .filter((line) => !/^let['']s\b/i.test(line))
+    .filter((line) => !/^(ok(?:ay)?|sure|alright)[, ]/i.test(line))
+    .filter((line) => !/^(let me|i['’]ll|i will|i am going to)\b/i.test(line))
+    .filter((line) => !/^(.{0,6}\bresponse structure\b)/i.test(line))
+    .filter((line) => !/^wait[, ]/i.test(line))
     .filter((line) => !/^no function call/i.test(line))
     .filter((line) => !/^\{.*"(?:name|tool_call|function)".*}/i.test(line))
     .filter((line) => !/^根据指令/i.test(line))
@@ -489,6 +493,11 @@ export function sanitizeModelResponse(text: string, language: LanguageCode = 'zh
     })
 
   if (lines.length === 0) {
+    const trimmed = content.trim()
+    if (trimmed.length > 0) {
+      // 如果清洗後內容為空，但原始仍有文字，直接回傳原始內容避免「無回應」的誤判
+      return trimmed
+    }
     return language === 'en'
       ? 'No meaningful response was provided. Please share a bit more detail so I can help.'
       : '目前沒有可用的建議，可以再多描述一點狀況嗎？'

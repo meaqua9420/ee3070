@@ -1742,12 +1742,13 @@ async function evaluateUltraSafetyDecision(input: string, language: LanguageCode
 const storedSettings = loadStoredSettings()
 
 const DEFAULT_CAT_ID = 'default'
+const DEFAULT_CAT_NAME = 'Neko'
 const catRegistry = new Map<string, CatProfile>()
 for (const cat of listCats()) {
   catRegistry.set(cat.id, cat)
 }
 if (!catRegistry.has(DEFAULT_CAT_ID)) {
-  const fallback = upsertCat({ id: DEFAULT_CAT_ID, name: 'Default Cat' })
+  const fallback = upsertCat({ id: DEFAULT_CAT_ID, name: DEFAULT_CAT_NAME })
   catRegistry.set(fallback.id, fallback)
 }
 
@@ -2913,16 +2914,28 @@ function buildFileAttachmentSummary(fileIds: string[]): string | null {
       logger.warn(`[fileAttachment] Missing metadata for ${fileId}`)
       continue
     }
-    const analysis = metadata.analysisResult as { summary?: string; type?: string } | undefined
+    const analysis = metadata.analysisResult as { summary?: string; type?: string; extractedText?: string } | undefined
     const summaryText = (analysis?.summary?.trim() || metadata.filename || 'Uploaded file').replace(/\s+/g, ' ').trim()
     const typeLabel = analysis?.type || metadata.fileType || metadata.mimeType?.split('/').pop() || 'file'
-    summaries.push(`• ${metadata.filename} (${typeLabel}): ${summaryText}`)
+
+    // 對於 PDF,如果有提取的文字,包含前500字符
+    let detailedContent = ''
+    if (metadata.fileType === 'pdf' && analysis?.extractedText) {
+      const preview = analysis.extractedText.substring(0, 500).trim()
+      if (preview.length > 0) {
+        detailedContent = `\n  內容預覽: ${preview}${analysis.extractedText.length > 500 ? '...' : ''}`
+      }
+    }
+
+    summaries.push(`• ${metadata.filename} (${typeLabel}):\n  分析摘要: ${summaryText}${detailedContent}`)
   }
   if (!summaries.length) return null
   const maxEntries = 5
-  const display = summaries.length > maxEntries ? summaries.slice(0, maxEntries).join('\n') : summaries.join('\n')
-  const suffix = summaries.length > maxEntries ? `\n+ ${summaries.length - maxEntries} more files` : ''
-  return `Attached files summary:\n${display}${suffix}`
+  const display = summaries.length > maxEntries ? summaries.slice(0, maxEntries).join('\n\n') : summaries.join('\n\n')
+  const suffix = summaries.length > maxEntries ? `\n\n+ ${summaries.length - maxEntries} more files` : ''
+
+  // 🆕 更強調的標題,明確指示這是用戶上傳的文件
+  return `📎 USER UPLOADED FILES (用戶剛上傳的文件 - 請優先參考這些內容回答問題):\n\n${display}${suffix}\n\n⚠️ 重要: 當用戶問及文件內容時,請主要基於以上文件分析來回答,而不是感測器數據。`
 }
 
 function buildFileAttachmentVisionContext(
@@ -6958,6 +6971,12 @@ app.post('/api/chat/suggestions', chatLimiter, async (req, res) => {
 
     const fileAttachmentSummary = buildFileAttachmentSummary(fileAttachmentIds)
     const fileVisionContext = buildFileAttachmentVisionContext(fileAttachmentIds, getPreferredLanguage())
+
+    // 🆕 FIX: 將文件上傳摘要注入到對話上下文中,讓 AI 能夠引用這些文件的分析結果
+    if (fileAttachmentSummary) {
+      conversationMessages.push({ role: 'system', content: fileAttachmentSummary })
+      logger.info(`[fileAttachment] Injected file summary for ${fileAttachmentIds.length} files into conversation`)
+    }
 
     let hasImageAttachment = inlineImageAttachments.length > 0 || fileVisionContext.hasImageAttachment
     let visionSummary: string | null = fileVisionContext.visionSummary
