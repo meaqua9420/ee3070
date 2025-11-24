@@ -181,6 +181,7 @@ import { createChatFavoritesRouter } from './routes/chatFavoritesRoutes'
 import {
   getPreferredLanguage,
   resolveRequestLanguage,
+  resolveRequestLanguageFromRequest,
   runWithLanguageContext,
   setPersistedLanguage,
 } from './services/languageService'
@@ -4801,6 +4802,7 @@ ${standardReview.text}
 
 
 app.get('/api/reports/professional', (req, res) => {
+  const language = resolveRequestLanguageFromRequest(req)
   const reportCatId = typeof req.query.catId === 'string' && req.query.catId.trim().length > 0 ? req.query.catId.trim() : activeCatId
   const snapshot = loadLatestSnapshot(reportCatId)
   const history = loadHistory(Math.max(HISTORY_LIMIT, 96), reportCatId)
@@ -4810,16 +4812,17 @@ app.get('/api/reports/professional', (req, res) => {
     history,
     alerts,
     settings: currentSettings,
-    language: getPreferredLanguage(),
+    language,
   })
   res.json({ ok: true, data: report })
 })
 
 app.get('/api/analytics/insights', (req, res) => {
+  const language = resolveRequestLanguageFromRequest(req)
   const insightsCatId = typeof req.query.catId === 'string' && req.query.catId.trim().length > 0 ? req.query.catId.trim() : activeCatId
   const snapshot = loadLatestSnapshot(insightsCatId)
   const history = loadHistory(Math.max(HISTORY_LIMIT, 96), insightsCatId)
-  const insights = deriveCareInsights(getPreferredLanguage(), snapshot, history, currentSettings)
+  const insights = deriveCareInsights(language, snapshot, history, currentSettings)
   res.json({
     ok: true,
     data: {
@@ -4831,9 +4834,10 @@ app.get('/api/analytics/insights', (req, res) => {
 })
 
 app.get('/api/analytics/forecast', (req, res) => {
+  const language = resolveRequestLanguageFromRequest(req)
   const forecastCatId = typeof req.query.catId === 'string' && req.query.catId.trim().length > 0 ? req.query.catId.trim() : activeCatId
   const history = loadHistory(Math.max(HISTORY_LIMIT, 120), forecastCatId)
-  const forecast = deriveBehaviorForecast(getPreferredLanguage(), history)
+  const forecast = deriveBehaviorForecast(language, history)
   res.json({ ok: true, data: forecast })
 })
 
