@@ -708,7 +708,7 @@ const MIGRATIONS: Migration[] = [
         ) VALUES (
           'default',
           'cat',
-          'Meme',
+          'Neko',
           NULL,
           '🐱',
           18, 28,
@@ -718,6 +718,16 @@ const MIGRATIONS: Migration[] = [
           datetime('now'),
           datetime('now')
         );
+      `)
+    },
+  },
+  {
+    id: '019_default_pet_name_neko',
+    up: (database) => {
+      database.exec(`
+        UPDATE pet_profiles
+        SET name = 'Neko'
+        WHERE id = 'default';
       `)
     },
   },
