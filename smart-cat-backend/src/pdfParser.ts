@@ -32,21 +32,35 @@ export async function extractTextFromPDF(fileId: string): Promise<string> {
     const pdfParseModule = (await import('pdf-parse')) as any
     // 兼容 default / module.exports / PDFParse
     const pdfParseFn =
-      pdfParseModule?.default ||
-      pdfParseModule?.PDFParse ||
-      pdfParseModule
+      typeof pdfParseModule?.default === 'function'
+        ? pdfParseModule.default
+        : typeof pdfParseModule === 'function'
+          ? pdfParseModule
+          : null
 
-    if (typeof pdfParseFn !== 'function') {
+    let pdfData: any = null
+
+    if (pdfParseFn) {
+      // 舊版/常見 API：直接呼叫函式
+      pdfData = await pdfParseFn(buffer, {
+        max: 50 * 1024 * 1024,
+        version: 'default',
+      })
+    } else if (pdfParseModule?.PDFParse) {
+      // 新版 API：PDFParse 為 class，需先 new 再調用 getText()
+      const parser = new pdfParseModule.PDFParse({
+        data: buffer,
+        max: 50 * 1024 * 1024,
+        version: 'default',
+      })
+      if (typeof parser.getText === 'function') {
+        pdfData = await parser.getText()
+      } else {
+        throw new Error('pdf-parse: PDFParse.getText is not available')
+      }
+    } else {
       throw new Error('pdf-parse module not loaded correctly')
     }
-
-    // 使用 pdf-parse 解析 PDF
-    const pdfData = await pdfParseFn(buffer, {
-      // 配置選項:最大緩衝區大小 (50MB)
-      max: 50 * 1024 * 1024,
-      // 提取版本資訊
-      version: 'default'
-    })
 
     // pdf-parse 返回的資料結構:
     // - text: 提取的所有文字內容
