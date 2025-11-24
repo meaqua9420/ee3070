@@ -48,15 +48,23 @@ export async function extractTextFromPDF(fileId: string): Promise<string> {
       })
     } else if (pdfParseModule?.PDFParse) {
       // 新版 API：PDFParse 為 class，需先 new 再調用 getText()
-      const parser = new pdfParseModule.PDFParse({
-        data: buffer,
-        max: 50 * 1024 * 1024,
-        version: 'default',
-      })
+      const parser = new pdfParseModule.PDFParse({ data: buffer })
       if (typeof parser.getText === 'function') {
-        pdfData = await parser.getText()
+        pdfData = await parser.getText({
+          max: 50 * 1024 * 1024,
+          version: 'default',
+        })
+      } else if (typeof parser.parse === 'function') {
+        pdfData = await parser.parse({
+          max: 50 * 1024 * 1024,
+          version: 'default',
+        })
       } else {
-        throw new Error('pdf-parse: PDFParse.getText is not available')
+        // 嘗試函式化調用
+        pdfData = await pdfParseModule.PDFParse(buffer, {
+          max: 50 * 1024 * 1024,
+          version: 'default',
+        })
       }
     } else {
       throw new Error('pdf-parse module not loaded correctly')
