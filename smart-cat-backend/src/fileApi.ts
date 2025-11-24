@@ -175,7 +175,8 @@ export async function handleFileAnalyze(req: Request, res: Response) {
       return
     }
     const id = rawId.trim()
-    const { description, question, modelPreference } = req.body
+    const { description, question, modelPreference, language } = req.body
+    const lang: 'zh' | 'en' = language === 'en' ? 'en' : 'zh'
 
     console.log(`[fileApi] Analyze request with modelPreference: ${modelPreference}`)
 
@@ -198,7 +199,9 @@ export async function handleFileAnalyze(req: Request, res: Response) {
         const visionPrompt =
           (typeof question === 'string' && question.trim()) ||
           (typeof description === 'string' && description.trim()) ||
-          '請描述這張圖片中的內容,特別注意貓咪的狀況和行為。'
+          (lang === 'en'
+            ? 'Describe this image, focusing on the pet’s condition and behavior.'
+            : '請描述這張圖片中的內容,特別注意寵物的狀況和行為。')
 
         const visionResult = await analyzeImageWithQwen({
           imageBase64: base64Image,
@@ -239,12 +242,14 @@ export async function handleFileAnalyze(req: Request, res: Response) {
               `[fileApi] Analyzing image ${image.index + 1} from page ${image.pageNumber} (${image.imageData.length} bytes)...`
             )
 
-            const visionResult = await analyzeImageWithQwen({
-              imageBase64: base64Image,
-              prompt:
-                '請描述這張圖片中的內容。如果是醫療相關圖片（如X光片、檢查報告、圖表等），請詳細說明你觀察到的醫療信息。',
-              language: 'zh',
-            })
+          const visionResult = await analyzeImageWithQwen({
+            imageBase64: base64Image,
+            prompt:
+              lang === 'en'
+                ? 'Describe this image. If it is medical (X-ray/report/chart), explain the key findings.'
+                : '請描述這張圖片中的內容。如果是醫療相關圖片（如X光片、檢查報告、圖表等），請詳細說明你觀察到的醫療信息。',
+            language: lang,
+          })
 
             imageAnalyses.push({
               pageNumber: image.pageNumber,
@@ -337,7 +342,7 @@ export async function handleFileAnalyze(req: Request, res: Response) {
           const generateFn = async (prompt: string) => {
             const result = await generateChatContent({
               question: prompt,
-              language: 'zh',
+              language: lang,
               modelPreference: actualModelPreference,
               reasoningEffort: reasoningEffort,
               snapshot: null,
@@ -391,13 +396,13 @@ export async function handleFileAnalyze(req: Request, res: Response) {
           reasoningEffort = 'low'
         }
 
-        const generateFn = async (prompt: string) => {
-          const result = await generateChatContent({
-            question: prompt,
-            language: 'zh',
-            modelPreference: actualModelPreference,
-            reasoningEffort: reasoningEffort,
-            snapshot: null,
+          const generateFn = async (prompt: string) => {
+            const result = await generateChatContent({
+              question: prompt,
+              language: lang,
+              modelPreference: actualModelPreference,
+              reasoningEffort: reasoningEffort,
+              snapshot: null,
             history: [],
           })
           return result.text
